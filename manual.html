@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Timetable Generator</title>
+    <link rel="stylesheet" href="manual.css">
+    <style>
+        /* CSS Styling */
+        body { 
+          background: #ece5da;
+          font-family: "Raleway", sans-serif;
+          color: ivory;
+          font-size: 20px;
+        }
+
+        nav {
+          margin: auto;
+          margin-top: 40px;
+          position: relative;
+          width: clamp(320px, 50vw ,100%);
+        }
+
+        nav h2 {
+          font-size: 1.5rem;
+          border-radius: 2px;
+          position: relative;
+          background: tomato;
+          height: 40px;
+          text-transform: uppercase;
+          margin-bottom: 0;
+          color: inherit;
+          font-weight: 200;
+          display: flex;
+          flex: 1;
+          justify-content: center;
+          align-items: center;
+          box-shadow: 4px 4px 20px -2px rgba(0, 0, 0, 0.35);
+          transition: all 0.4s;
+        }
+
+        nav:hover h2 {
+          transform: translateY(-2px);
+          box-shadow: 2px 2px 5px -1px rgba(0, 0, 0, 0.35);
+          transition: all 0.4s;
+        }
+
+        #toggle {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          z-index: 1;
+          opacity: 0;
+          cursor: pointer;
+          height: 40px;
+        }
+
+        h2::before{
+          position: absolute;
+          right: 0;
+          top: 0;
+          height: inherit;
+          aspect-ratio: 1;
+          background: currentColor;
+          display: flex;
+          align-items: center;
+          padding-right: 1rem;
+          content: "";
+          clip-path: polygon(50% 25%, 20% 80%, 80% 80%);
+          transform: rotate(180deg) scale(0.75);
+        }
+
+        #toggle:not(:checked) ~ h2::before {
+          transform: rotate(0deg) scale(0.75);
+        }
+
+        #toggle:focus ~ h2{
+          background: mediumorchid;
+          transition: background 0.45s;
+        }
+
+        #toggle:checked ~ ul {
+          visibility: hidden;
+          opacity: 0;
+        }
+
+        #toggle:not(:checked) ~ ul {
+          opacity: 1;
+          transition: opacity 0.3s ease-in-out;
+        }
+
+        nav ul {
+          padding-left: 0;
+          padding-top: 1rem;
+          margin-top: 0;
+          background: #fdfdfc;
+          list-style: none;
+          overflow: hidden;
+          text-align: right;
+          text-align: center;
+          transition: all 0.4s ease-out;
+          width: 100%;
+          position: absolute;
+        }
+
+        nav ul li {
+          border-radius: 2px;
+          position: relative;
+          display: inline-block;
+          line-height: 1.5;
+          width: 100%;
+          margin: 0 0 0.25rem 0;
+          background: tomato;
+          transition: background 3s;
+          box-shadow: 2px 2px 10px -2px rgba(0, 0, 0, 0.35);
+        }
+
+        nav ul li:hover,
+        nav ul li a:focus {
+          background: mediumorchid;
+          transition: background 0.45s;
+        }
+
+        nav ul a {
+          display: block;
+          color: inherit;
+          text-transform: lowercase;
+          font-weight: 200;
+          text-decoration: none;
+        }
+
+        .container {
+          max-width: 55ch;
+          margin: auto;
+          color: #36454F;
+        }
+
+        /* Main Content Styles */
+        main {
+            padding: 20px;
+        }
+
+        section {
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        /* Footer Styles */
+        footer {
+            background: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Student Timetable Generator</h1>
+    </header>
+
+    <main>
+        <section id="course-selection">
+            <h2>Select Your Major</h2>
+            <form id="course-form">
+                <label for="faculty">Select Faculty:</label>
+                <select id="faculty" onchange="updateMajors()">
+                    <option value="" disabled selected>Select a faculty</option>
+                    <option value="Arts">Faculty of Arts</option>
+                    <option value="Sciences">Faculty of Sciences</option>
+                    <option value="Commerce">Faculty of Commerce</option>
+                </select>
+
+                <label for="majors">Select Your Major:</label>
+                <select id="majors" onchange="showCourses()">
+                    <option value="" disabled selected>Select a major</option>
+                </select>
+            </form>
+
+            <div id="see-courses" style="display:none;">
+                <h2>Available Courses</h2>
+                <ul id="courses-list"></ul>
+                <button type="button" onclick="generateTimetablePDF()">Download Timetable PDF</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Student Dashboard. All rights reserved.</p>
+    </footer>
+
+    <!-- Add jsPDF library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script>
+        const majors = {
+            "Arts": {
+                "Department of Information Studies": [
+                    "Information Systems Analysis",
+                    "Digital Library Management",
+                    "Information Policy and Ethics"
+                ],
+                "Development Studies & Anthropology": [
+                    "Global Development Issues",
+                    "Cultural Anthropology",
+                    "Gender Studies in Development"
+                ],
+                "Training Workshops": [
+                    "Workshop on Public Speaking",
+                    "Creative Writing Workshop",
+                    "Leadership Skills Workshop"
+                ],
+                "Department of Psychology": [
+                    "Introduction to Psychology",
+                    "Cognitive Behavioral Therapy",
+                    "Psychology of Well-being"
+                ],
+                "NetLearn": [
+                    "Online Learning Tools",
+                    "Digital Pedagogy",
+                    "E-Learning Course Design"
+                ],
+                "Life Literacies": [
+                    "Life Skills Development",
+                    "Critical Thinking Skills",
+                    "Financial Literacy Basics"
+                ],
+                "Department of Philosophy & Applied Ethics": [
+                    "Ethics in Technology",
+                    "Philosophy of Mind",
+                    "Contemporary Ethical Issues"
+                ],
+                "English Department": [
+                    "Modern British Literature",
+                    "Creative Writing",
+                    "Literary Theory"
+                ],
+                "isiZulu": [
+                    "isiZulu Language and Culture",
+                    "Advanced isiZulu Grammar",
+                    "isiZulu Literature Studies"
+                ],
+                "Department of Politics and International Studies": [
+                    "International Relations",
+                    "Comparative Politics",
+                    "Political Theory"
+                ],
+                "Communication Science": [
+                    "Media Studies",
+                    "Interpersonal Communication",
+                    "Public Relations Strategies"
+                ],
+                "Department of Creative Arts": [
+                    "Art History",
+                    "Introduction to Theatre",
+                    "Digital Media Arts"
+                ],
+                "Department of History": [
+                    "South African History",
+                    "World History Themes",
+                    "Historiography"
+                ],
+                "Department of Recreation & Tourism": [
+                    "Tourism Management",
+                    "Outdoor Recreation Planning",
+                    "Event Management"
+                ],
+                "Department of Social Work": [
+                    "Foundations of Social Work",
+                    "Community Development",
+                    "Social Work Ethics"
+                ],
+                "Department of Sociology": [
+                    "Sociology of Family",
+                    "Urban Sociology",
+                    "Social Change and Development"
+                ],
+                "Moodle Staff Training": [
+                    "Advanced Moodle Techniques",
+                    "Course Design in Moodle"
+                ],
+                "Library Services": [
+                    "Information Literacy",
+                    "Digital Resource Management"
+                ],
+                "Department of Criminal Justice": [
+                    "Criminology",
+                    "Criminal Law",
+                    "Forensic Psychology"
+                ],
+                "Centre of Teaching and Learning": [
+                    "Innovative Teaching Methods",
+                    "Assessment Strategies",
+                    "Learning Technologies"
+                ]
+            },
+            "Sciences": {
+                "Agriculture": [
+                    "Sustainable Agriculture Practices",
+                    "Agricultural Economics",
+                    "Crop Production Techniques"
+                ],
+                "Biochemistry and Microbiology": [
+                    "Biochemical Techniques",
+                    "Microbial Genetics",
+                    "Enzyme Technology"
+                ],
+                "Botany": [
+                    "Plant Physiology",
+                    "Plant Taxonomy",
+                    "Ethnobotany"
+                ],
+                "Chemistry": [
+                    "Organic Chemistry",
+                    "Analytical Chemistry",
+                    "Inorganic Chemistry"
+                ],
+                "Computer Science": [
+                    "Data Structures and Algorithms",
+                    "Software Development",
+                    "Web Technologies"
+                ],
+                "Consumer Science": [
+                    "Nutrition and Health",
+                    "Consumer Behavior",
+                    "Home Economics"
+                ],
+                "Engineering": [
+                    "Mechanical Engineering Principles",
+                    "Civil Engineering Design",
+                    "Electrical Systems"
+                ],
+                "Geography": [
+                    "Physical Geography",
+                    "Human Geography",
+                    "Geographic Information Systems (GIS)"
+                ],
+                "Human Movement Science": [
+                    "Kinesiology",
+                    "Exercise Physiology",
+                    "Sports Psychology"
+                ],
+                "Hydrology": [
+                    "Water Resource Management",
+                    "Hydrological Modelling",
+                    "Surface Water Hydrology"
+                ],
+                "HRU": [
+                    "Workforce Management",
+                    "HR Analytics",
+                    "Training and Development"
+                ],
+                "Mathematical Sciences": [
+                    "Calculus",
+                    "Linear Algebra",
+                    "Statistics for Science"
+                ],
+                "Nursing Science": [
+                    "Fundamentals of Nursing",
+                    "Nursing Ethics",
+                    "Clinical Practice"
+                ],
+                "Physics and Engineering": [
+                    "Classical Mechanics",
+                    "Thermodynamics",
+                    "Electronics"
+                ],
+                "Science Access": [
+                    "Bridging Course in Science",
+                    "Fundamentals of Scientific Inquiry"
+                ],
+                "Zoology": [
+                    "Animal Behavior",
+                    "Conservation Biology",
+                    "Comparative Anatomy"
+                ]
+            },
+            "Commerce": {
+                "Department of Public Administration": [
+                    "Introduction to Public Administration",
+                    "Public Policy Analysis",
+                    "Public Sector Management"
+                ],
+                "Department of Economics": [
+                    "Microeconomic Theory",
+                    "Macroeconomic Principles",
+                    "Econometrics"
+                ],
+                "Department of Business Management": [
+                    "Principles of Management",
+                    "Strategic Management",
+                    "Organizational Behavior"
+                ],
+                "HONOURS Business Management Modules": [
+                    "Advanced Strategic Management",
+                    "Leadership in Organizations",
+                    "Entrepreneurship"
+                ],
+                "Department of Accounting and Auditing": [
+                    "Financial Accounting",
+                    "Managerial Accounting",
+                    "Auditing Principles"
+                ],
+                "Commerce Foundation": [
+                    "Foundations of Business",
+                    "Introduction to Marketing",
+                    "Business Ethics"
+                ],
+    
+                "Transport and Logistics": [
+                    "Supply Chain Management",
+                    "Logistics Planning",
+                    "Transportation Economics"
+                ],
+                "Higher Certificate in Accountancy": [
+                    "Basic Financial Principles",
+                    "Introduction to Taxation"
+                ],
+                "Law": [
+                    "Business Law",
+                    "Contract Law",
+                    "Ethics in Law"
+                ],
+        
+            }
+        };
+
+        function updateMajors() {
+            const facultySelect = document.getElementById("faculty");
+            const majorsSelect = document.getElementById("majors");
+            majorsSelect.innerHTML = '<option value="" disabled selected>Select a major</option>';
+            const selectedFaculty = facultySelect.value;
+            if (selectedFaculty) {
+                const selectedMajors = Object.keys(majors[selectedFaculty]);
+                selectedMajors.forEach(major => {
+                    const option = document.createElement("option");
+                    option.value = major;
+                    option.textContent = major;
+                    majorsSelect.appendChild(option);
+                });
+            }
+        }
+
+        function showCourses() {
+            const majorsSelect = document.getElementById("majors");
+            const coursesList = document.getElementById("courses-list");
+            const seeCourses = document.getElementById("see-courses");
+            coursesList.innerHTML = '';
+            const selectedMajor = majorsSelect.value;
+            const selectedFaculty = document.getElementById("faculty").value;
+            if (selectedMajor) {
+                const courses = majors[selectedFaculty][selectedMajor];
+                courses.forEach(course => {
+                    const listItem = document.createElement("li");
+                    listItem.textContent = course;
+                    coursesList.appendChild(listItem);
+                });
+                seeCourses.style.display = 'block';
+            }
+        }
+
+        function generateTimetablePDF() {
+            const doc = new jsPDF();
+            doc.setFont("Helvetica", "normal");
+            doc.text("Student Timetable", 20, 10);
+            const coursesList = document.getElementById("courses-list");
+            let y = 20;
+            Array.from(coursesList.children).forEach(course => {
+                doc.text(course.textContent, 20, y);
+                y += 10;
+            });
+            doc.save("timetable.pdf");
+        }
+    </script>
+</body>
+</html>

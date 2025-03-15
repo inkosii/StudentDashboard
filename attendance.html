@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        input, button {
+            margin-top: 10px;
+            padding: 10px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Get Password</h1>
+    <form id="generate-password-form">
+        <label for="studentNumber">Student Number:</label>
+        <input type="text" id="studentNumber" name="studentNumber" required>
+        <button type="submit">Get Password</button>
+    </form>
+    <p id="response"></p>
+
+    <script>
+        document.getElementById('generate-password-form').addEventListener('submit', async function(event) {
+            event.preventDefault();  // Prevent the form from submitting normally
+            const studentNumber = document.getElementById('studentNumber').value;
+            const responseElement = document.getElementById('response');
+
+            try {
+                // Fetch request to the Flask server
+                const response = await fetch(`http://127.0.0.1:5000/generate-password?studentNumber=${encodeURIComponent(studentNumber)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // Check if the response was successful
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                // Parse the JSON response
+                const data = await response.json();
+                if (data.success) {
+                    responseElement.innerText = `Password: ${data.password}`;
+                } else {
+                    responseElement.innerText = `Error: ${data.message}`;ssss
+                }
+            } catch (error) {
+                // Handle errors (e.g., network errors, server errors)
+                responseElement.innerText = `An error occurred: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>
